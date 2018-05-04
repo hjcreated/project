@@ -5,6 +5,7 @@
  * calculate how many turns each Motor spin per second,moreover accourding to phisical law (destance = speed / time) we can calculate for how long   
  * should the wheels turn and how much pwm we should provide. 
  * the UltraSonic sensors dedict nearby obsticals and decide whether to keep moving or stop.
+ * and this code also recivecs reads from glove sent by bluetooth to control the SHB gusturly.
  */
 
 #include <TimerOne.h> 
@@ -14,19 +15,19 @@
 #include "Turn.h"
 // this library Controls the gyroscope to ensure 90 degree turns.
 
-AF_DCMotor rightMotor(4); //create motor #1 using M3 output on Motor Drive Shield, set to 1kHz PWM frequency
-AF_DCMotor leftMotor(2); //create motor #2 using M1 output on Motor Drive Shield, set to 1kHz PWM frequency
+AF_DCMotor rightMotor(4); //create motor #1 using M4 output on Motor Drive Shield, set to 1kHz PWM frequency right motor
+AF_DCMotor leftMotor(2); //create motor #2 using M1 output on Motor Drive Shield, set to 1kHz PWM frequency left motor
 
-int rightIRSensor; 
-int leftIRSensor;
+int rightIRSensor; // to take reads from the right ir sensor 
+int leftIRSensor; // to take reads from the right ir sensor 
 
 Turnlib turn; // instance of turn to use turn library.
 int theta; // the current theta of the SHB.
 int target; // in which theta should the HBS turn to to ensure 90 degree turns.
-int x;
-int y;
+int x;// hold the value opf the theta temporary 
+int y; // hold the value of the target temporary
 
-int normal = 90; // intial speed in which the SHB will start moving.
+int normal = 150; // intial speed in which the SHB will start moving.
 int sharp = 150; // turning speed 
 int backward = 150; // backward speed in sharp turns.
 
@@ -44,8 +45,8 @@ const byte MOTOR_B = 18;  // Motor 1 Interrupt Pin - INT 0 - Left Motor
 const int trigPin = 32;
 const int echoPin = 30;
 // defines variables
-long duration;
-int distance;
+   long duration;
+   int distance;
 
 
 //=============== SETUP METHOD=========================
@@ -53,7 +54,7 @@ void setup() {
   turn.Setup(); // necessarily to setup GyroScop mpu 5060.
   pinMode(A0, INPUT); // readings from right IR Sensor.
   pinMode(A3, INPUT); // readings from left IR Sensor.
-  pinMode(42, OUTPUT); // red Blue LED.
+  pinMode(42, OUTPUT); // red Blue LED for Obsticals.
   pinMode(50, OUTPUT); // left Blue LED.
   pinMode(52, OUTPUT); // right Blue LED.
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
@@ -63,42 +64,36 @@ void setup() {
 // Attach the Interrupts to their ISR's
   attachInterrupt(digitalPinToInterrupt (MOTOR_A), ISR_countA, RISING);  // Increase counter A when speed sensor pin goes High
   attachInterrupt(digitalPinToInterrupt (MOTOR_B), ISR_countB, RISING);  // Increase counter B when speed sensor pin goes High
-  digitalWrite(50,HIGH);
-  digitalWrite(52,HIGH);
   digitalWrite(42,LOW);
- MoveForward(200,150);
- delay(1000);
-spinLeftGyro();
+ //==================== BUTTONS ==============
+  pinMode(33,INPUT);// Operation Room button Pin
+
+//==================buzzer==============
+  pinMode(22,OUTPUT);
+ 
 }
 
 //=================== LOOP ================================
 void loop() {
-/*
-  digitalWrite(42,LOW);
-  //rightIRSensor = analogRead(A0);
-  //leftIRSensor = analogRead(A1);
-  
-  if(Calcdistance()> 13){
-leftMotor.setSpeed(100);
-  rightMotor.setSpeed(100);
-    
-    // Set Motor A forward
-   rightMotor.run(FORWARD);
-   // Set Motor B forward
-   leftMotor.run(FORWARD);
-   
-  }
- 
-  if(Calcdistance()<= 13){
-    Stop();
-    delay(100);
-    
-    digitalWrite(42,HIGH);
-    delay(100);
-    digitalWrite(42,LOW);
-    }
-  */  
-  //  Serial.println(Calcdistance());
+turn.readAngle();
+
+  // ================ if Operation room button pressed=====
+  if(digitalRead(33) == HIGH)
+    {
+      digitalWrite(50,HIGH); // turn the blue lights on 
+      digitalWrite(52,HIGH); // turn the blue lights on
+      MoveForward(200,normal);  // start moving forward 
+      delay(1000);  // wait one second
+      spinLeftGyro(); // spin to the left using gyroscope
+      MoveForward(100,normal);  // start moving forward 
+      delay(1000);
+      spinRightGyro();
+      
+      digitalWrite(50,LOW); // turn the blue lights off 
+      digitalWrite(52,LOW); // turn the blue lights off
+       turn.readAngle();
+       turn.fifoReset();
+    }// if
    
 }// LOOP
 
@@ -140,6 +135,18 @@ void MoveForward(int steps, int mspeed)
    // Go forward until step value is reached
    while (steps > counter_A && steps > counter_B) {
    
+//======== check Obsticals
+    if(Calcdistance()<= 13){
+    Stop();
+    delay(100);
+    digitalWrite(42,HIGH);
+    delay(100);
+    digitalWrite(42,LOW);
+    tone(22,500,500);
+    }//if
+else{
+
+   
     if (steps > counter_A) {
     rightMotor.setSpeed(mspeed);
     } else {
@@ -150,7 +157,10 @@ void MoveForward(int steps, int mspeed)
     } else {
     leftMotor.setSpeed(0);
     }
-   }
+
+}
+   
+   }//while 
     
   // Stop when done
   leftMotor.setSpeed(0);
@@ -234,10 +244,10 @@ void SpinRight(int steps, int mspeed)
 
 // ============ Spin left gyro  ========================
  void spinLeftGyro(){   
-    for(int i=0 ; i<300;i++){
+    for(int i=0 ; i<300;i++){ // to prevent fifo Overflow
       theta = turn.readAngle();
-      Serial.print(theta);
-      Serial.println(" ");
+     // Serial.print(theta);
+     // Serial.println(" ");
                   }
      turn.fifoReset();             
     //======================= theta > 90 =============================
@@ -249,10 +259,10 @@ void SpinRight(int steps, int mspeed)
         leftMotor.run(BACKWARD);
         rightMotor.run(FORWARD);
         theta = turn.readAngle();
-        Serial.print(theta);
-        Serial.print(" ");
-        Serial.print(target);
-        Serial.println("");}
+       // Serial.print(theta);
+      //  Serial.print(" ");
+       /// Serial.print(target);
+       // Serial.println("");}
         /*
         //====== adjesment =========
         for(int i=0 ; i<100 ; i++){
@@ -264,8 +274,8 @@ void SpinRight(int steps, int mspeed)
              }
         }//adjesemnt
         */
-        }//theta > 90
-
+        }//while
+    }
      // ===================== theta < 90 =============================
     else if (theta < 90 ) {
        x = 95 - theta;
@@ -277,10 +287,10 @@ while (true){
         leftMotor.run(BACKWARD);
         rightMotor.run(FORWARD);
         theta = turn.readAngle();
-        Serial.print(theta);
-        Serial.print(" ");
-        Serial.print(target);
-        Serial.println("");
+      //// Serial.print(theta);
+     //  Serial.print(" ");
+     ///  Serial.print(target);
+     //  Serial.println("");
         
         }
 
@@ -290,10 +300,10 @@ while (true){
         leftMotor.run(BACKWARD);
         rightMotor.run(FORWARD);
         theta = turn.readAngle();
-        Serial.print(theta);
-        Serial.print(" ");
-        Serial.print(target);
-        Serial.println("");
+       // Serial.print(theta);
+      ////  Serial.print(" ");
+      //  Serial.print(target);
+      //  Serial.println("");
                 }
        break;
        }//while alkbereh
@@ -314,11 +324,101 @@ while (true){
        
     leftMotor.setSpeed(0);
     rightMotor.setSpeed(0);
+   
       }
+
+ 
+
+// ============ SPIN RIGHT GYRO ========================
+ void spinRightGyro(){   
+    for(int i=0 ; i<300;i++){ // to prevent fifo Overflow
+      theta = turn.readAngle();
+    //  Serial.print(theta);
+    //  Serial.println(" ");
+           
+                  }
+     turn.fifoReset();             
+    //======================= theta < 270 =============================
+    if ( theta > 0 && theta < 270) {
+      target = theta + 92;
+      while (theta < target) {
+        rightMotor.setSpeed(backward);
+        leftMotor.setSpeed(sharp);
+        leftMotor.run(FORWARD);
+        rightMotor.run(BACKWARD);
+        theta = turn.readAngle();
+      //  Serial.print(theta);
+       // Serial.print(" ");
+      ////  Serial.print(target);
+       // Serial.println("");}
+        /*
+        //====== adjesment =========
+        for(int i=0 ; i<100 ; i++){
+        if(theta < target - 5 ){
+         LeftMotor.setSpeed(backward);
+         RightMotor.setSpeed(sharp);
+         LeftMotor.run(FORWARD);
+         RightMotor.run(BACKWARD);
+             }
+        }//adjesemnt
+        */
+        }//theta< 270
+    }
+     // ===================== theta > 270 =============================
+    else if (theta > 270 ) {
+       y = 360 - theta;
+       target = 85 - y;
+while (true){
+        while(theta >  target){
+        leftMotor.setSpeed(170);
+        rightMotor.setSpeed(150);
+        leftMotor.run(FORWARD);
+        rightMotor.run(BACKWARD);
+        theta = turn.readAngle();
+    //    Serial.print(theta);
+    //    Serial.print(" ");
+    //    Serial.print(target);
+    //    Serial.println("");
+        
+        }
+
+        while(theta < target){
+        leftMotor.setSpeed(backward);
+        rightMotor.setSpeed(sharp);
+        leftMotor.run(FORWARD);
+        rightMotor.run(BACKWARD);
+        theta = turn.readAngle();
+    //    Serial.print(theta);
+    //    Serial.print(" ");
+    //    Serial.print(target);
+    //    Serial.println("");
+                }
+       break;
+       }//while alkbereh
+       /*
+       //====== adjesment =========
+       for(int i=0 ; i<100 ; i++){
+        if(theta < target - 5 ){
+         LeftMotor.setSpeed(backward);
+         RightMotor.setSpeed(sharp);
+         LeftMotor.run(FORWARD);
+         RightMotor.run(BACKWARD);
+             }
+ 
+        }//adjesment
+       */
+    }//theta >270
+
+       
+    leftMotor.setSpeed(0);
+    rightMotor.setSpeed(0);
+   
+    }
+      
 //=================== Calculate distance using Ultrasonic ===============
 
 int Calcdistance(){
-  digitalWrite(trigPin, LOW);
+digitalWrite(trigPin, LOW);
 delayMicroseconds(2);
 // Sets the trigPin on HIGH state for 10 micro seconds
 digitalWrite(trigPin, HIGH);
