@@ -12,16 +12,31 @@
 // this library reads Gyroscope Data.
 
 Turnlib turn; // instance of turn to use turn library.
+bool on=false ; // to start or stop sending 
 //=============== SETUP METHOD=========================
 void setup() {
   turn.Setup(); // necessarily to setup GyroScop mpu 5060.
   Serial.begin(9600);
+  pinMode(7,INPUT); // Green Button  
+  pinMode(8,INPUT); // Red Button  
+  pinMode(11,OUTPUT); // Green Light  
+  pinMode(9,OUTPUT); // Red Light  
+
 }
 
 //=================== LOOP ================================
 void loop() {
-  //start reading from gyroscope 
+  
+
+if(digitalRead(7)==HIGH){on=true;}
+if(digitalRead(8)==HIGH){on=false;}
+if(on == true){digitalWrite(11,HIGH);digitalWrite(9,LOW);
+//start reading from gyroscope 
 turn.readAngle();
+}
+if(on == false){digitalWrite(9,HIGH);digitalWrite(11,LOW);
+Serial.write('7');
+}
 
 
 
