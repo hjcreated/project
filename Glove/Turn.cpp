@@ -5,7 +5,7 @@
     #include "Wire.h"
 #endif
 #define OUTPUT_READABLE_YAWPITCHROLL
-
+#define SERIAL_BUFFER_SIZE 100
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
@@ -119,7 +119,7 @@ void Turnlib::Setup(){
 
         // read a packet from FIFO
         mpu.getFIFOBytes(fifoBuffer, packetSize);
-        
+        mpu.resetFIFO();
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
@@ -142,6 +142,18 @@ void Turnlib::Setup(){
     
     
    // return (int( (ypr[0] * 180/M_PI)+180));
+
+if((readUp()>-10 && readUp()<10) &&(readLeft()>20)){Serial.write('3');}// Turnning right
+if((readUp()>-10 && readUp()<10) &&(readLeft()<-20)){Serial.write('4');}// Turnning left
+if((readLeft()>-20 && readLeft()<20) &&(readUp()>20)){Serial.write('1');}// Turnning up
+if((readLeft()>-20 && readLeft()<20) &&(readUp()<-20)){Serial.write('2');}// Turnning Down
+if((readLeft()>-20 && readLeft()<20)&&(readUp()>-8 && readUp()<8)){Serial.write('0');}//Stop
+//mpu.resetFIFO();
+
+    
+    
+    
+    
     }
 
 
@@ -161,11 +173,13 @@ static void Turnlib::fifoReset() {
 
 static int Turnlib::readLeft() {
     return int((ypr[2] * 180/M_PI));
+
 }
 //===================== READ UP  ===================
 
 static int Turnlib::readUp() {
     return int((ypr[1] * 180/M_PI));
+
 }
 
     
