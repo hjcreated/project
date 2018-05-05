@@ -47,11 +47,17 @@ const int echoPin = 30;
 // defines variables
    long duration;
    int distance;
-
-
+//=================== State of the Glove ========
+char state = 0;
+// ==================== heart pulse
+int PulseSensorPurplePin = 0; // pulse sensor reads from A0 pin 
+int Signal;                // holds the incoming raw data. Signal value can range from 0-1024
+int Threshold = 550;            // Determine which Signal to "count as a beat", and which to ingore.
+bool checkPulse = false; // start by button push
 //=============== SETUP METHOD=========================
 void setup() {
-  turn.Setup(); // necessarily to setup GyroScop mpu 5060.
+  Serial.begin(9600);
+ // turn.Setup(); // necessarily to setup GyroScop mpu 5060.
   pinMode(A0, INPUT); // readings from right IR Sensor.
   pinMode(A3, INPUT); // readings from left IR Sensor.
   pinMode(42, OUTPUT); // red Blue LED for Obsticals.
@@ -59,7 +65,13 @@ void setup() {
   pinMode(52, OUTPUT); // right Blue LED.
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+  pinMode(36,OUTPUT); // top left green light
+  pinMode(38,OUTPUT); // back left green light
+  pinMode(40,OUTPUT); // back right
+  pinMode(34,OUTPUT); // top right
 
+
+  
 
 // Attach the Interrupts to their ISR's
   attachInterrupt(digitalPinToInterrupt (MOTOR_A), ISR_countA, RISING);  // Increase counter A when speed sensor pin goes High
@@ -67,33 +79,79 @@ void setup() {
   digitalWrite(42,LOW);
  //==================== BUTTONS ==============
   pinMode(33,INPUT);// Operation Room button Pin
-
+  pinMode(35,INPUT);// take reads from pulse sensor
 //==================buzzer==============
   pinMode(22,OUTPUT);
- 
+  
 }
 
 //=================== LOOP ================================
 void loop() {
-turn.readAngle();
-
+//Serial.println(turn.readAngle()); // prevent fifo OverFlow
+ 
   // ================ if Operation room button pressed=====
   if(digitalRead(33) == HIGH)
     {
       digitalWrite(50,HIGH); // turn the blue lights on 
       digitalWrite(52,HIGH); // turn the blue lights on
       MoveForward(200,normal);  // start moving forward 
-      delay(1000);  // wait one second
-      spinLeftGyro(); // spin to the left using gyroscope
+      delay(500);  // wait one second
+      SpinLeft(55,150); // spin to the left using gyroscope
       MoveForward(100,normal);  // start moving forward 
-      delay(1000);
-      spinRightGyro();
+      delay(500); 
+      SpinRight(60,150);
       
       digitalWrite(50,LOW); // turn the blue lights off 
       digitalWrite(52,LOW); // turn the blue lights off
-       turn.readAngle();
-       turn.fifoReset();
+       
     }// if
+// ================ pulse button is pushed =====
+ if(digitalRead(35) == HIGH)
+    {
+      
+      
+    }// if
+
+  // ===================== TAKES READ FROM THE GLOVE IF AVALIABLE =========
+
+if(Serial.read() != '7'){
+    state = Serial.read();
+    if(state == '1'){Glovebackward();
+       digitalWrite(40,HIGH);
+       digitalWrite(38,HIGH);
+       digitalWrite(36,LOW);  
+       digitalWrite(34,LOW); }
+    if(state == '2'){Gloveforward();
+       digitalWrite(40,LOW);
+       digitalWrite(38,LOW);
+       digitalWrite(36,HIGH);  
+       digitalWrite(34,HIGH); }
+    if(state == '3'){Gloveright();
+       digitalWrite(40,HIGH);
+       digitalWrite(38,LOW);
+       digitalWrite(36,LOW);  
+       digitalWrite(34,HIGH);}
+     if(state == '4'){Gloveleft();
+       digitalWrite(40,LOW);
+       digitalWrite(38,HIGH);
+       digitalWrite(36,HIGH);  
+       digitalWrite(34,LOW); }
+    if(state == '0'){GloveStop();
+       digitalWrite(40,LOW);
+       digitalWrite(38,LOW);
+       digitalWrite(36,LOW);  
+       digitalWrite(34,LOW); }
+}// not equal 7 
+
+
+if(Serial.read()== '7'){
+   digitalWrite(40,LOW);
+   digitalWrite(38,LOW);
+   digitalWrite(36,LOW);  
+   digitalWrite(34,LOW); }
+
+
+    
    
 }// LOOP
 
@@ -146,6 +204,9 @@ void MoveForward(int steps, int mspeed)
     }//if
 else{
 
+   
+
+ //  Serial.println(turn.readAngle());
    
     if (steps > counter_A) {
     rightMotor.setSpeed(mspeed);
@@ -241,6 +302,43 @@ void SpinRight(int steps, int mspeed)
   counter_B = 0;  //  reset counter B to zero 
 
 }
+
+// ============ Spin Left  ========================
+
+void SpinLeft(int steps, int mspeed) 
+{
+   counter_A = 0;  //  reset counter A to zero
+   counter_B = 0;  //  reset counter B to zero
+   
+   // Set Motor A reverse
+   rightMotor.run(FORWARD);
+  
+  // Set Motor B forward
+  leftMotor.run(BACKWARD); 
+   // Go until step value is reached
+   while (steps > counter_A && steps > counter_B) {
+   
+    if (steps > counter_A) {
+    rightMotor.setSpeed(mspeed);
+    } else {
+    rightMotor.setSpeed(0);
+    }
+    if (steps > counter_B) {
+    leftMotor.setSpeed(mspeed);
+    } else {
+    leftMotor.setSpeed(0);
+    }
+   }
+    
+  // Stop when done
+  rightMotor.setSpeed(0);
+  leftMotor.setSpeed(0);
+  counter_A = 0;  //  reset counter A to zero
+  counter_B = 0;  //  reset counter B to zero 
+
+}
+
+
 
 // ============ Spin left gyro  ========================
  void spinLeftGyro(){   
@@ -340,7 +438,7 @@ while (true){
      turn.fifoReset();             
     //======================= theta < 270 =============================
     if ( theta > 0 && theta < 270) {
-      target = theta + 92;
+      target = theta + 85;
       while (theta < target) {
         rightMotor.setSpeed(backward);
         leftMotor.setSpeed(sharp);
@@ -367,7 +465,7 @@ while (true){
      // ===================== theta > 270 =============================
     else if (theta > 270 ) {
        y = 360 - theta;
-       target = 85 - y;
+       target = 95 - y;
 while (true){
         while(theta >  target){
         leftMotor.setSpeed(170);
@@ -435,8 +533,72 @@ void Stop(){
   leftMotor.setSpeed(0);
   rightMotor.setSpeed(0);
   }
+//============ moving forward when recieveing signal from glove==========
+void Gloveforward(){
+   //======== check Obsticals
+    if(Calcdistance()<= 13){
+    Stop();
+    delay(100);
+    digitalWrite(42,HIGH);
+    delay(100);
+    digitalWrite(42,LOW);
+    tone(22,500,500);
+    }//if
+else{
+     
+   rightMotor.run(FORWARD);
+   leftMotor.run(FORWARD);
+   rightMotor.setSpeed(150);
+   leftMotor.setSpeed(150);
+}
+       }
+//============ moving backward when recieveing signal from glove==========       
+void Glovebackward(){
+  rightMotor.run(BACKWARD);
+   leftMotor.run(BACKWARD);
+   rightMotor.setSpeed(150);
+   leftMotor.setSpeed(150);
+   
+  }
+//============ moving to the left when recieveing signal from glove==========  
+void Gloveleft(){
+  rightMotor.run(FORWARD);
+   leftMotor.run(BACKWARD);
+   rightMotor.setSpeed(150);
+   leftMotor.setSpeed(150);
+}
+//============ moving to the right when recieveing signal from glove==========
+void Gloveright(){
+  rightMotor.run(BACKWARD);
+   leftMotor.run(FORWARD);
+   rightMotor.setSpeed(150);
+   leftMotor.setSpeed(150);
+   
+  }
+//============ stop when recieveing signal from glove==========  
+void GloveStop(){
+   rightMotor.run(RELEASE);
+   leftMotor.run(RELEASE);
+   rightMotor.setSpeed(0);
+   leftMotor.setSpeed(0);
+   }
 
-
+// ============== cheach heart beat ==========
+void checkHeart(){
+  Signal = analogRead(PulseSensorPurplePin);
+  if(checkPulse == true){
+  
+if(Signal > Threshold){                          // If the signal is above "550", then "turn-on" Arduino's on-Board LED.
+     tone(22,500); } 
+else if(Signal < 250){
+    tone(22,1000);}
+else {
+     noTone(22);                //  Else, the sigal must be below "550", so "turn-off" this LED.}
+  
+  }
+  
+  }
+}
 
 
 
