@@ -1,0 +1,121 @@
+/*
+================== full size div ==============================
+ */
+.centerDiv{
+    width: 100%;
+    height:100%;
+    alignment: center;
+}
+/*
+================ center something in the center of the page ===
+ */
+.centered {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    margin-top: -50px;
+    margin-left: -350px;
+}
+.centered2 {
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    margin-top: -50px;
+    margin-left: -200px;
+}
+/*
+================== to hide the scrollbar ===================
+ */
+html {
+    overflow: scroll;
+    overflow-x: hidden;
+}
+::-webkit-scrollbar {
+    width: 0;  /* remove scrollbar space */
+    background: transparent;  /* optional: just make scrollbar invisible */
+}
+/* optional: show position indicator in red */
+::-webkit-scrollbar-thumb {
+    background: #FF0000;
+}
+/*
+================== align navbar icons vertical  ===================
+ */
+ul {
+    list-style: none;
+    float: right;
+    margin-right: 100px;
+}
+
+li {
+    float: left;
+    width: 50px;
+    line-height: 20px;
+    vertical-align: middle;
+    text-align: center;
+    margin: 0;
+}
+/*
+================== Up Button  ===================
+ */
+.upButton{
+ position: fixed;
+    right:60px;
+    bottom:80px;
+    height:30px;
+    width:100%;
+    color: black;
+
+    /*
+    ================== Google fonts ===================
+     */
+
+}
+@font-face {
+    font-family: 'Satisfy-Regular';
+    src:url("../fonts/googleFonts/Satisfy-Regular.ttf");
+    src:url("../fonts/googleFonts/Satisfy-Regular.ttf") format("ttf"),
+    url("../fonts/googleFonts/Satisfy-Regular.ttf")format('truetype');
+}
+
+@font-face {
+    font-family: 'HeadlandOne-Regular';
+    src:url("../fonts/googleFonts/HeadlandOne-Regular.ttf");
+    src:url("../fonts/googleFonts/HeadlandOne-Regular.ttf") format("ttf"),
+    url("../fonts/googleFonts/HeadlandOne-Regular.ttf")format('truetype');
+}
+@font-face {
+    font-family: 'SortsMillGoudy-Regular';
+    src:url("../fonts/googleFonts/SortsMillGoudy-Regular.ttf");
+    src:url("../fonts/googleFonts/SortsMillGoudy-Regular.ttf") format("ttf"),
+    url("../fonts/googleFonts/SortsMillGoudy-Regular.ttf")format('truetype');
+}
+
+/*
+    ================== login black div ===================
+     */
+.loginDivBlack{
+    background-color: black;
+    opacity: 0.8;
+    width:25%;
+    height:70%;
+    margin-top: 9%;
+    border-radius: 20px;
+    padding-top: 8px;
+}
+
+/*
+    ================== Table header ===================
+     */
+ td{
+     padding-top: 25px;
+
+    }
+
+ .editButton{
+     border-radius: 25px;
+     width: 80%;
+     background-color: #0b1011;
+     color: white;
+     border: hidden;
+ }
